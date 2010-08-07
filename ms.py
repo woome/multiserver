@@ -2,14 +2,16 @@
 
 import re
 import os
+import traceback
 from os.path import join as joinpath
 
-PATH="/home/nferrier/woome"
+PATH="/home/app/hgrepos/repos"
 
 def dispatch(path, environ, start_response):
     """Dispatch the wsgi call to the specified directory"""
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
+
     import sys
     sys.path += [joinpath(path, "woome")]
     wsgihandler_maker = __import__('server.spawnwoome')
@@ -23,7 +25,14 @@ def multiwsgidispatch(environ, start_response):
     target_re = re.compile(re.sub("-", "[_-]", targetpart))
     for e in os.listdir(PATH):
         if target_re.match(e):
-            return dispatch(joinpath(PATH, e), environ, start_response)
+            try:
+                return dispatch(joinpath(PATH, e), environ, start_response)
+            except Exception,e:
+                print e
+                traceback.print_exc()
+                start_response('500 Error', [('content-type', 'text/html')])
+                return ["<p>Error: %s</p>" % e]
+                
 
     # Otherwise it's an error
     start_response('500 Error', [('content-type', 'text/html')])
