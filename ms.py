@@ -22,7 +22,7 @@ def multiwsgidispatch(environ, start_response):
     host = environ["HTTP_HOST"]
     targetpart = host.split(".")[0]
     # Make a regex that will match against targets
-    target_re = re.compile(re.sub("-", "[_-]", targetpart))
+    target_re = re.compile("%s.*" % re.sub("-", "[_-]", targetpart))
     for e in os.listdir(PATH):
         if target_re.match(e):
             try:
@@ -54,7 +54,8 @@ def spawning_config_factory(args):
         'port': args.get('port'),
         'app_factory': "ms.app_factory",
         'app': "", 
-        'num_processes': 1,
+        'deadman_timeout': 10,
+        'num_processes': 4,
         }
 
 # End
