@@ -19,8 +19,11 @@ import os
 from os.path import join as joinpath
 
 def dispatch(path, environ, start_response):
-    """Dispatch the wsgi call to the specified directory"""
+    """Dispatch the wsgi call to the specified directory.
 
+    At the moment this is WooMe specific. Seems like a candidate for
+    plugin or something via the config file?
+    """
     import sys
     sys.path += [joinpath(path, "woome")]
 
