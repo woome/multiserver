@@ -16,7 +16,6 @@ The python module loaded is right now, always: server.spawnwoome
 
 import re
 import os
-import traceback
 from os.path import join as joinpath
 
 def dispatch(path, environ, start_response):
@@ -34,7 +33,7 @@ def dispatch(path, environ, start_response):
     except AttributeError:
          pass
     
-    from os.path import abspath, basename, dirname
+    from os.path import basename
     reponame = basename(path).replace("_", "-")
 
     settings.STATIC_URL = 'http://%s.repos.dev.woome.com' % reponame
