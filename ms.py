@@ -24,39 +24,48 @@ def dispatch(path, environ, start_response):
     At the moment this is WooMe specific. Seems like a candidate for
     plugin or something via the config file?
     """
-    import sys
-    sys.path += [joinpath(path, "woome")]
 
-    # We have to do this ONLY because I want to monkeypatch settings
-    import config
-    config.setup_django_env()
+    repopath = joinpath(path, "woome")
+    os.chdir(repopath)
+
+    import sys
+    sys.path += [repopath]
+
+    import config.importname
+    conf = config.importname.get()
+    cm = __import__("config.%s" % conf, {}, {}, [""])
+
+    from os.path import basename
+    reponame = basename(path).replace("_", "-")
+
+    cm.STATIC_URL = 'http://%s.repos.dev.woome.com' % reponame
+    cm.IMG_URL = 'http://%s.repos.dev.woome.com' % reponame
+    cm.ENABLE_JS_MINIFY = False
+
     import settings
     try:
          sys.path = [settings.DJANGO_PATH_DIR] + sys.path
     except AttributeError:
          pass
-    
-    from os.path import basename
-    reponame = basename(path).replace("_", "-")
 
-    settings.STATIC_URL = 'http://%s.repos.dev.woome.com' % reponame
-    settings.IMG_URL = 'http://%s.repos.dev.woome.com' % reponame
+    import django.core.management
+    django.core.management.setup_environ(settings)
 
-    import server.spawnwoome
-    wsgi_handler = server.spawnwoome.getapp()
+    import django.core.handlers.wsgi
+    class SpawningDjangoWSGIHandler(django.core.handlers.wsgi.WSGIHandler):
+        pass
+
+    wsgi_handler = SpawningDjangoWSGIHandler()
     return wsgi_handler(environ, start_response)
 
-def multiwsgidispatch(conf):
+def multiwsgidispatch(wsgi_path):
     """Get a wsgi handler to do multiple dispatch.
 
     The handler uses the Host header to try to find a matching wsgi
     instance in the config['wsgi_path']
     """
-    # Capture the config
-    config = conf
     def wsgi_dispatcher(environ, start_response):
         """Virtual host WSGI dispatcher"""
-        wsgi_path = config.get("wsgi_path")
         host = environ["HTTP_HOST"]
         targetpart = host.split(".")[0]
         # Make a regex that will match against targets
@@ -86,7 +95,7 @@ from os.path import expanduser
 ###    spawn -p 8110 -f ms.spawning_config_factory none
 
 def app_factory(conf):
-    return multiwsgidispatch(conf)
+    return multiwsgidispatch(conf.get("wsgi_path"))
 
 def spawning_config_factory(args):
     """A Spawning config factory"""
@@ -106,5 +115,34 @@ def spawning_config_factory(args):
         'deadman_timeout': 10,
         'num_processes': 4,
         }
+
+import wsgiref.simple_server
+RealServerHandler = wsgiref.simple_server.ServerHandler
+class MServerHandler(RealServerHandler):
+    def __init__(self, stdin, stdout, stderr, environ):
+        RealServerHandler.__init__(
+            self, 
+            stdin, stdout, stderr, environ,
+            multithread=False,
+            multiprocess=True
+            )
+
+def main():
+    conf = ConfigParser()
+    try:
+        conf.read(expanduser("~/.mswsgi.conf"))
+    except:
+        pass
+
+    wsgiref.simple_server.ServerHandler = MServerHandler
+    s = wsgiref.simple_server.make_server(
+        "localhost", 
+        9001, 
+        multiwsgidispatch(conf.get("Server", "wsgi_path")),
+        )
+    s.serve_forever()
+
+if __name__ == "__main__":
+    main()
 
 # End
