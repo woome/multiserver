@@ -2,8 +2,8 @@
 """
 MultiServer
 
-This is a simple wsgi handler for Spawning that does virtual host
-handling across a directory of python modules.
+This is a simple wsgi server that does virtual host handling across a
+directory of python modules.
 
 This can use a config variable wsgi_path to find the modules. The path
 can be specified in a config file: ~/.mswsgi.conf
@@ -11,7 +11,8 @@ can be specified in a config file: ~/.mswsgi.conf
   [Server]
   wsgi_path = ...
 
-The python module loaded is right now, always: server.spawnwoome
+The python module loaded is always a woome repo right now. Will work
+out a way to specify a config.
 """
 
 import re
@@ -89,32 +90,6 @@ def multiwsgidispatch(wsgi_path):
 # Config stuff
 from ConfigParser import ConfigParser
 from os.path import expanduser
-
-### Spawning stuff 
-### Start this under spawning like:
-###    spawn -p 8110 -f ms.spawning_config_factory none
-
-def app_factory(conf):
-    return multiwsgidispatch(conf.get("wsgi_path"))
-
-def spawning_config_factory(args):
-    """A Spawning config factory"""
-    conf = ConfigParser()
-    try:
-        conf.read(expanduser("~/.mswsgi.conf"))
-    except:
-        pass
-
-    return {
-        'args': args,
-        'host': args.get('host'),
-        'port': args.get('port'),
-        'app_factory': "ms.app_factory",
-        'app': "", 
-        'wsgi_path': conf.get("Server", "wsgi_path"),
-        'deadman_timeout': 10,
-        'num_processes': 4,
-        }
 
 import wsgiref.simple_server
 RealServerHandler = wsgiref.simple_server.ServerHandler
