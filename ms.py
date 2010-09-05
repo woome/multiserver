@@ -1,3 +1,4 @@
+#!/usr/bin/python
 
 """
 MultiServer
@@ -23,7 +24,7 @@ Reference for the config file:
 
   module_name  the module name used to do the dispatching.
   wsgi_path    where to find server instances
-  port         the port to start the multiserver on
+  port         the port to start the multiserver on (default: 9001)
 
 """
 
