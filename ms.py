@@ -11,60 +11,33 @@ can be specified in a config file: ~/.mswsgi.conf
   [Server]
   wsgi_path = ...
 
-The python module loaded is always a woome repo right now. Will work
-out a way to specify a config.
+The python module loaded is defined in the config file:
+
+  [Server]
+  module_name = ...
+
+The module is imported by it's name. A function 'dispatch' is
+expected.
+
+Reference for the config file:
+
+  module_name  the module name used to do the dispatching.
+  wsgi_path    where to find server instances
+  port         the port to start the multiserver on
+
 """
 
 import re
 import os
 from os.path import join as joinpath
 
-def dispatch(path, environ, start_response):
-    """Dispatch the wsgi call to the specified directory.
-
-    At the moment this is WooMe specific. Seems like a candidate for
-    plugin or something via the config file?
-    """
-
-    repopath = joinpath(path, "woome")
-    os.chdir(repopath)
-
-    import sys
-    sys.path += [repopath]
-
-    import config.importname
-    conf = config.importname.get()
-    cm = __import__("config.%s" % conf, {}, {}, [""])
-
-    from os.path import basename
-    reponame = basename(path).replace("_", "-")
-
-    cm.STATIC_URL = 'http://%s.repos.dev.woome.com' % reponame
-    cm.IMG_URL = 'http://%s.repos.dev.woome.com' % reponame
-    cm.ENABLE_JS_MINIFY = False
-
-    import settings
-    try:
-         sys.path = [settings.DJANGO_PATH_DIR] + sys.path
-    except AttributeError:
-         pass
-
-    import django.core.management
-    django.core.management.setup_environ(settings)
-
-    import django.core.handlers.wsgi
-    class SpawningDjangoWSGIHandler(django.core.handlers.wsgi.WSGIHandler):
-        pass
-
-    wsgi_handler = SpawningDjangoWSGIHandler()
-    return wsgi_handler(environ, start_response)
-
-def multiwsgidispatch(wsgi_path):
+def multiwsgidispatch(wsgi_path, module_name):
     """Get a wsgi handler to do multiple dispatch.
 
     The handler uses the Host header to try to find a matching wsgi
     instance in the config['wsgi_path']
     """
+    m = __import__(module_name, {}, {}, [""])
     def wsgi_dispatcher(environ, start_response):
         """Virtual host WSGI dispatcher"""
         host = environ["HTTP_HOST"]
@@ -75,7 +48,7 @@ def multiwsgidispatch(wsgi_path):
             if target_re.match(entry):
                 try:
                     path = joinpath(wsgi_path, entry)
-                    return dispatch(path, environ, start_response)
+                    return m.dispatch(path, environ, start_response)
                 except Exception,e:
                     start_response('500 Error', [('content-type', 'text/html')])
                     return ["<p>Error: %s</p>" % e]
@@ -103,7 +76,7 @@ class MServerHandler(RealServerHandler):
             )
 
 def main():
-    conf = ConfigParser()
+    conf = ConfigParser({"port": "9001"})
     try:
         conf.read(expanduser("~/.mswsgi.conf"))
     except:
@@ -112,8 +85,11 @@ def main():
     wsgiref.simple_server.ServerHandler = MServerHandler
     s = wsgiref.simple_server.make_server(
         "localhost", 
-        9001, 
-        multiwsgidispatch(conf.get("Server", "wsgi_path")),
+        int(conf.get("Server", "port")), 
+        multiwsgidispatch(
+            conf.get("Server", "wsgi_path"),
+            conf.get("Server", "module_name")
+            ),
         )
     s.serve_forever()
 
