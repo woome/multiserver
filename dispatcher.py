@@ -6,10 +6,9 @@ from os.path import join as joinpath
 import os
 
 def dispatch(path, environ, start_response):
-    """Dispatch the wsgi call to the specified directory.
+    """Dispatch the wsgi call to the WooMe instance in the specified directory.
 
-    At the moment this is WooMe specific. Seems like a candidate for
-    plugin or something via the config file?
+    This only handles ticket repos of course.
     """
 
     repopath = joinpath(path, "woome")
