@@ -1,0 +1,14 @@
+= Multiserver =
+
+This is a WSGI server designed to help you dispatch to multiple other WSGI handlers.
+
+Essentially it is a virtual hosting WSGI server. Hostnames (although
+it could be any HTTP variable) are used to map to python modules which
+are then imported and dispatched to.
+
+There is a simple plugin architecture for the module mapping which
+allows control of exactly how the dispatch it done.
+
+WooMe use this in their development environment to make each and every
+cloned copy of woome in development available to staff and to
+automated browser testing.
