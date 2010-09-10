@@ -5,7 +5,7 @@ A multiserver dispatcher for WooMe.com
 from os.path import join as joinpath
 import os
 
-def dispatch(path, environ, start_response):
+def dispatch(path, target_pattern, environ, start_response):
     """Dispatch the wsgi call to the WooMe instance in the specified directory.
 
     This only handles ticket repos of course.
@@ -24,8 +24,8 @@ def dispatch(path, environ, start_response):
     from os.path import basename
     reponame = basename(path).replace("_", "-")
 
-    cm.STATIC_URL = 'http://%s.repos.dev.woome.com' % reponame
-    cm.IMG_URL = 'http://%s.repos.dev.woome.com' % reponame
+    cm.STATIC_URL = target_pattern % reponame
+    cm.IMG_URL = target_pattern % reponame
     cm.ENABLE_JS_MINIFY = False
 
     import settings
